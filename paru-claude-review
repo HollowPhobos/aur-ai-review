@@ -8,7 +8,7 @@
 #   PARU_REVIEW_BACKEND   claude (default) | ollama
 #   PARU_REVIEW_MAXBYTES  max bytes per file / diff (default 100000)
 #   PARU_CLAUDE_MODEL     model for claude --model (default: Claude Code default)
-#   PARU_OLLAMA_MODEL     ollama model (default qwen2.5:14b-instruct-q4_K_M)
+#   PARU_OLLAMA_MODEL     ollama model (default gemma4:12b)
 #   PARU_OLLAMA_URL       ollama server (default http://127.0.0.1:11434)
 #   PARU_OLLAMA_CTX       context window in tokens (default 32768)
 
@@ -29,7 +29,7 @@ fi
 review_root="${1:-$PWD}"
 backend="${PARU_REVIEW_BACKEND:-claude}"
 max_bytes="${PARU_REVIEW_MAXBYTES:-${PARU_CLAUDE_MAXBYTES:-100000}}"
-ollama_model="${PARU_OLLAMA_MODEL:-qwen2.5:14b-instruct-q4_K_M}"
+ollama_model="${PARU_OLLAMA_MODEL:-gemma4:12b}"
 ollama_url="${PARU_OLLAMA_URL:-http://127.0.0.1:11434}"
 ollama_ctx="${PARU_OLLAMA_CTX:-32768}"
 

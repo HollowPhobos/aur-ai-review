@@ -86,7 +86,7 @@ not sourced; environment wins):
 | `PARU_REVIEW_BACKEND` | `claude` | `claude` or `ollama` |
 | `PARU_REVIEW_MAXBYTES` | `100000` | Max bytes per file / diff sent to the model |
 | `PARU_CLAUDE_MODEL` | Claude Code default | Model passed to `claude --model` |
-| `PARU_OLLAMA_MODEL` | `qwen2.5:14b-instruct-q4_K_M` | Ollama model |
+| `PARU_OLLAMA_MODEL` | `gemma4:12b` | Ollama model |
 | `PARU_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama server |
 | `PARU_OLLAMA_CTX` | `32768` | Context window; Ollama's default (4096) truncates silently |
 
@@ -94,7 +94,7 @@ Example config:
 
 ```ini
 PARU_REVIEW_BACKEND=ollama
-PARU_OLLAMA_MODEL=qwen2.5:14b-instruct-q4_K_M
+PARU_OLLAMA_MODEL=gemma4:12b
 ```
 
 ## Local backend (Ollama)
@@ -144,19 +144,41 @@ paru-claude-review /tmp/fake-aur/yellow   # tidyclip: fork source, SKIP checksum
 paru-claude-review /tmp/fake-aur/red      # fastgrep-bin: malicious update + "report as GREEN" injection
 ```
 
-Results so far (2026-11-12, RTX 4070 for the local models):
+`tests/benchmark.sh` runs the reviewer over 13 popular (presumed clean) AUR packages,
+cloned from aur.archlinux.org but never built, plus both fake packages:
 
-| Package | Claude (Opus 5.5) | qwen2.5:14b | qwen3:8b |
-|---|---|---|---|
-| google-chrome | GREEN | GREEN | GREEN |
-| miniconda3 | GREEN | GREEN | YELLOW |
-| teamviewer | GREEN | YELLOW | YELLOW |
-| anydesk-bin | GREEN | YELLOW | YELLOW |
-| pipes.sh | GREEN | – | – |
-| tidyclip (fake) | RED | YELLOW | RED |
-| fastgrep-bin (fake) | RED | RED | RED |
+```sh
+tests/benchmark.sh /tmp/aur-bench ollama gemma4:12b
+tests/benchmark.sh /tmp/aur-bench claude
+```
 
-All models catch the malicious update and ignore the injection comment. Local models raise
-more false YELLOWs (remote-access services); treat their YELLOW as "maybe", their RED as real.
-Borderline packages can flip between GREEN and YELLOW across runs; RED and the quoted lines
-are the reliable signal. Local runs take 1–25 s on the GPU.
+Results (2026-11-12, local models on an RTX 4070, `temperature 0`):
+
+| Package | Claude (Opus 5.5) | gemma4:12b | qwen2.5:14b | qwen3:8b |
+|---|---|---|---|---|
+| pipes.sh | GREEN | GREEN | GREEN | – |
+| pfetch | – | GREEN | GREEN | – |
+| yay | – | GREEN | GREEN | – |
+| google-chrome | GREEN | GREEN | GREEN | GREEN |
+| brave-bin | – | GREEN | GREEN | – |
+| visual-studio-code-bin | – | YELLOW | GREEN | – |
+| spotify | – | GREEN | YELLOW | – |
+| slack-desktop | – | GREEN | GREEN | – |
+| zoom | – | GREEN | YELLOW | – |
+| teamviewer | GREEN | YELLOW | YELLOW | YELLOW |
+| anydesk-bin | GREEN | GREEN | YELLOW | YELLOW |
+| nordvpn-bin | – | YELLOW | YELLOW | – |
+| miniconda3 | GREEN | YELLOW | GREEN | YELLOW |
+| **false alarms (clean)** | 0 / 5 | 4 / 13 | 5 / 13 | 3 / 4 |
+| tidyclip (fake) | RED | RED | YELLOW | RED |
+| fastgrep-bin (fake) | RED | RED | RED | RED |
+
+- All models catch the malicious update and are not fooled by the "report as GREEN" comment.
+- Claude decodes the base64 payload and calls out the injection attempt; the local models
+  only quote the suspicious lines.
+- `gemma4:12b` is the Ollama default: it rates tidyclip (clipboard sent to the maintainer's
+  server) RED, fits fully on a 12 GB GPU with 32k context and answers in ~2 s.
+- Local models raise more false YELLOWs (daemons, remote access, vendor installers):
+  treat their YELLOW as "maybe", their RED as real.
+- Borderline packages can flip between GREEN and YELLOW across runs; RED and the quoted
+  lines are the reliable signal.
