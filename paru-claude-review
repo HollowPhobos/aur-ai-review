@@ -1,14 +1,37 @@
 #!/usr/bin/env bash
-# paru FileManager hook: let Claude review AUR build files before paru asks to proceed.
+# paru FileManager hook: let an LLM review AUR build files before paru asks to proceed.
 # paru.conf:  [bin]  FileManager = paru-claude-review
 #
-# Claude is only a second opinion; the PKGBUILD is attacker-controlled input.
-# Env: PARU_CLAUDE_MODEL (optional), PARU_CLAUDE_MAXBYTES (per file, default 100000)
+# The LLM is only a second opinion; the PKGBUILD is attacker-controlled input.
+#
+# Settings (environment wins over config file ~/.config/aur-ai-review/config, KEY=value lines):
+#   PARU_REVIEW_BACKEND   claude (default) | ollama
+#   PARU_REVIEW_MAXBYTES  max bytes per file / diff (default 100000)
+#   PARU_CLAUDE_MODEL     model for claude --model (default: Claude Code default)
+#   PARU_OLLAMA_MODEL     ollama model (default qwen2.5:14b-instruct-q4_K_M)
+#   PARU_OLLAMA_URL       ollama server (default http://127.0.0.1:11434)
+#   PARU_OLLAMA_CTX       context window in tokens (default 32768)
 
 set -u
 
+# Config file: plain KEY=value, not sourced (no code execution), env vars take precedence
+config="${XDG_CONFIG_HOME:-$HOME/.config}/aur-ai-review/config"
+if [[ -r "$config" ]]; then
+    while IFS='=' read -r key value; do
+        [[ "$key" =~ ^PARU_[A-Z_]+$ ]] || continue
+        value="${value%\"}"; value="${value#\"}"
+        if [[ -z "${!key:-}" ]]; then
+            export "$key=$value"
+        fi
+    done <"$config"
+fi
+
 review_root="${1:-$PWD}"
-max_bytes="${PARU_CLAUDE_MAXBYTES:-100000}"
+backend="${PARU_REVIEW_BACKEND:-claude}"
+max_bytes="${PARU_REVIEW_MAXBYTES:-${PARU_CLAUDE_MAXBYTES:-100000}}"
+ollama_model="${PARU_OLLAMA_MODEL:-qwen2.5:14b-instruct-q4_K_M}"
+ollama_url="${PARU_OLLAMA_URL:-http://127.0.0.1:11434}"
+ollama_ctx="${PARU_OLLAMA_CTX:-32768}"
 
 red=$'\e[1;31m'; yellow=$'\e[1;33m'; green=$'\e[1;32m'; bold=$'\e[1m'; reset=$'\e[0m'
 
@@ -80,38 +103,80 @@ Be concise. Do not repeat routine content. Answer in English only.'
 input="$(build_input)"
 
 if ! grep -qE '^=== PACKAGE .*: (UPDATE|NEW)' <<<"$input"; then
-    echo "${green}:: paru-claude-review: nothing changed since last review, skipping Claude${reset}" >&2
+    echo "${green}:: paru-claude-review: nothing changed since last review, skipping review${reset}" >&2
     exit 0
 fi
-
-echo "${bold}:: Claude reviews ${#pkgdirs[@]} package(s)...${reset}" >&2
 
 # Run from an empty dir: an AUR repo could ship CLAUDE.md or .claude/settings.json
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
 
-model_args=()
-if [[ -n "${PARU_CLAUDE_MODEL:-}" ]]; then
-    model_args=(--model "$PARU_CLAUDE_MODEL")
-fi
+review_claude() {
+    local model_args=()
+    if [[ -n "${PARU_CLAUDE_MODEL:-}" ]]; then
+        model_args=(--model "$PARU_CLAUDE_MODEL")
+    fi
+    (cd "$workdir" && printf '%s\n' "$input" | claude -p "$prompt" \
+        --tools "" --strict-mcp-config --no-session-persistence --setting-sources "" "${model_args[@]}" 2>&1)
+}
 
-result="$(cd "$workdir" && printf '%s\n' "$input" | claude -p "$prompt" \
-    --tools "" --strict-mcp-config --no-session-persistence --setting-sources "" "${model_args[@]}" 2>&1)"
+review_ollama() {
+    local request response think
+    # think=false keeps reasoning models fast; models without thinking support reject it -> retry without
+    for think in false omit; do
+        request="$(jq -n --arg model "$ollama_model" --arg system "$prompt" --arg user "$input" \
+            --argjson ctx "$ollama_ctx" --arg think "$think" '
+            {model: $model, stream: false,
+             options: {num_ctx: $ctx, temperature: 0},
+             messages: [{role: "system", content: $system}, {role: "user", content: $user}]}
+            + (if $think == "false" then {think: false} else {} end)')"
+        response="$(curl -sS --max-time 900 "$ollama_url/api/chat" -d "$request" 2>&1)" || {
+            echo "ollama not reachable at $ollama_url: $response"
+            return 1
+        }
+        if jq -e '.message.content' >/dev/null 2>&1 <<<"$response"; then
+            jq -r '.message.content' <<<"$response" | sed '/<think>/,/<\/think>/d'
+            return 0
+        fi
+        if [[ "$think" == false ]] && grep -qi 'think' <<<"$response"; then
+            continue
+        fi
+        echo "ollama error: $response"
+        return 1
+    done
+}
+
+case "$backend" in
+    claude) label="Claude" ;;
+    ollama) label="Ollama ($ollama_model)" ;;
+    *)
+        echo "${yellow}:: unknown PARU_REVIEW_BACKEND '$backend', review manually${reset}" >&2
+        exit 0
+        ;;
+esac
+
+echo "${bold}:: $label reviews ${#pkgdirs[@]} package(s)...${reset}" >&2
+result="$(review_"$backend")"
 status=$?
 
 echo
 if [[ $status -ne 0 || -z "$result" ]]; then
-    echo "${yellow}:: Claude review failed (exit $status), review manually:${reset}"
+    echo "${yellow}:: $label review failed (exit $status), review manually:${reset}"
     echo "$result"
 else
-    case "$(head -n1 <<<"$result")" in
+    # Local models sometimes add a preamble: put the VERDICT line first
+    verdict="$(grep -m1 -E 'VERDICT:' <<<"$result")"
+    if [[ -z "$verdict" ]]; then
+        verdict="VERDICT: UNKNOWN (model did not follow the format)"
+    fi
+    case "$verdict" in
         *RED*)    color=$red ;;
         *YELLOW*) color=$yellow ;;
         *GREEN*)  color=$green ;;
         *)        color=$yellow ;;
     esac
-    echo "${color}$(head -n1 <<<"$result")${reset}"
-    tail -n +2 <<<"$result"
+    echo "${color}${verdict}${reset}"
+    grep -v -F -x -- "$verdict" <<<"$result"
 fi
 echo
 

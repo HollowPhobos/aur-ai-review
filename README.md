@@ -1,6 +1,6 @@
 # paru-claude-review
 
-Lets Claude review AUR build files (PKGBUILD, `.install`, patches) before paru asks
+Lets an LLM (Claude, or a local model via Ollama) review AUR build files (PKGBUILD, `.install`, patches) before paru asks
 "Proceed with installation?". Claude is a second opinion only — you still decide.
 
 ```
@@ -43,7 +43,8 @@ is not visible — the prompt flags such patterns instead.
 ## Requirements
 
 - `paru`
-- `claude` (Claude Code CLI), logged in
+- `claude` (Claude Code CLI), logged in — for the default backend
+- `ollama` + `ollama-cuda`, `curl`, `jq` — for the local backend
 - `git`, `bash`
 
 ## Installation
@@ -77,10 +78,56 @@ is not visible — the prompt flags such patterns instead.
 
 ## Configuration
 
+Set via environment or in `~/.config/aur-ai-review/config` (plain `KEY=value` lines,
+not sourced; environment wins):
+
 | Variable | Default | Meaning |
 |---|---|---|
+| `PARU_REVIEW_BACKEND` | `claude` | `claude` or `ollama` |
+| `PARU_REVIEW_MAXBYTES` | `100000` | Max bytes per file / diff sent to the model |
 | `PARU_CLAUDE_MODEL` | Claude Code default | Model passed to `claude --model` |
-| `PARU_CLAUDE_MAXBYTES` | `100000` | Max bytes per file / diff sent to Claude |
+| `PARU_OLLAMA_MODEL` | `qwen2.5:14b-instruct-q4_K_M` | Ollama model |
+| `PARU_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama server |
+| `PARU_OLLAMA_CTX` | `32768` | Context window; Ollama's default (4096) truncates silently |
+
+Example config:
+
+```ini
+PARU_REVIEW_BACKEND=ollama
+PARU_OLLAMA_MODEL=qwen2.5:14b-instruct-q4_K_M
+```
+
+## Local backend (Ollama)
+
+Requires `ollama` **and** `ollama-cuda` (Arch splits the GPU backend into its own package;
+without it Ollama silently runs on CPU) plus `curl` and `jq`.
+
+Run Ollama as a user service, using the models in `~/.ollama`:
+
+```ini
+# ~/.config/systemd/user/ollama.service
+[Unit]
+Description=Ollama (user)
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/ollama serve
+Environment=OLLAMA_HOST=127.0.0.1:11434
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+```
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now ollama.service
+journalctl --user -u ollama | grep 'inference compute'   # should list the GPU, not "cpu"
+```
+
+The local call has no tools at all (plain chat API, `temperature 0`). For reasoning models
+`think: false` is sent; models that don't support it are retried without.
 
 ## Disable
 
@@ -97,18 +144,19 @@ paru-claude-review /tmp/fake-aur/yellow   # tidyclip: fork source, SKIP checksum
 paru-claude-review /tmp/fake-aur/red      # fastgrep-bin: malicious update + "report as GREEN" injection
 ```
 
-Results so far (Opus 5.5, 2026-11-12):
+Results so far (2026-11-12, RTX 4070 for the local models):
 
-| Package | Verdict |
-|---|---|
-| pipes.sh, google-chrome, anydesk-bin, teamviewer, miniconda3 | GREEN (with notes) |
-| tidyclip (fake) | RED — reasonable, clipboard goes to maintainer's server |
-| fastgrep-bin (fake) | RED — base64 decoded, injection comment flagged |
+| Package | Claude (Opus 5.5) | qwen2.5:14b | qwen3:8b |
+|---|---|---|---|
+| google-chrome | GREEN | GREEN | GREEN |
+| miniconda3 | GREEN | GREEN | YELLOW |
+| teamviewer | GREEN | YELLOW | YELLOW |
+| anydesk-bin | GREEN | YELLOW | YELLOW |
+| pipes.sh | GREEN | – | – |
+| tidyclip (fake) | RED | YELLOW | RED |
+| fastgrep-bin (fake) | RED | RED | RED |
 
-Borderline packages can flip between GREEN and YELLOW across runs; RED and the quoted lines are the reliable signal.
-
-## Ideas
-
-- Local LLM backend via Ollama (`PARU_REVIEW_BACKEND=claude|ollama`), Claude stays default.
-  Needs an explicit `num_ctx` (16–32k), otherwise long diffs get truncated silently.
-  Benchmark with the fake packages.
+All models catch the malicious update and ignore the injection comment. Local models raise
+more false YELLOWs (remote-access services); treat their YELLOW as "maybe", their RED as real.
+Borderline packages can flip between GREEN and YELLOW across runs; RED and the quoted lines
+are the reliable signal. Local runs take 1–25 s on the GPU.
