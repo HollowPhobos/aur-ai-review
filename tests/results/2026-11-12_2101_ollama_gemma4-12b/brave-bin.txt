@@ -1,0 +1,9 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: GREEN
+
+brave-bin: Web browser that blocks ads and trackers by default (binary release)
+- Routine binary package using official GitHub release URLs.
+- Standard `brave-bin.sh` wrapper for handling custom flags.
+- No suspicious network access or obfuscation detected.
+

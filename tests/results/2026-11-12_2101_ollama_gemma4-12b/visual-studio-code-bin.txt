@@ -1,0 +1,8 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: YELLOW
+visual-studio-code-bin: Visual Studio Code official binary package.
+- install=visual-studio-code-bin.install
+- install -m755 "${srcdir}/${_pkgname}-bin.sh" "${pkgdir}/usr/bin/code"
+- exec /usr/share/code/bin/code "$@" $CODE_USER_FLAGS
+

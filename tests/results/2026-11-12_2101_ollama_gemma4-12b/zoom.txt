@@ -1,0 +1,10 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: GREEN
+
+zoom: Video Conferencing and Web Conferencing Service
+- No suspicious network activity or remote code execution detected.
+- Source URL matches the official Zoom domain.
+- Checksum is present for the binary package.
+- Package construction uses standard copy commands for a pre-compiled binary.
+

@@ -1,0 +1,10 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: YELLOW
+teamviewer: All-In-One Software for Remote Support and Online Meetings
+- `install=teamviewer.install`
+- `sed -i '/function CheckQtQuickControls()/{N;a ls /usr/lib/qt/qml/QtQuick/Controls/qmldir &>/dev/null && return # ArchLinux' ./opt/teamviewer/tv_bin/script/teamviewer_setup`
+- `./opt/teamviewer/tv_bin/script/teamviewer_setup checklibs`
+- `cp -dr --no-preserve=ownership ./data/{etc,opt,usr,var} "${pkgdir}"/`
+- `post_remove() { rm -rf /opt/teamviewer }`
+

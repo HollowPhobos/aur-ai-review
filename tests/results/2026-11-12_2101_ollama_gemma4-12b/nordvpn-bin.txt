@@ -1,0 +1,9 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: YELLOW
+nordvpn-bin: NordVPN CLI tool for Linux
+- `install=nordvpn-bin.install`
+- `chattr -i /var/lib/nordvpn/data/*`
+- `ln -s $lib /usr/lib/`
+- `rm -r "${pkgdir}/usr/sbin"`
+

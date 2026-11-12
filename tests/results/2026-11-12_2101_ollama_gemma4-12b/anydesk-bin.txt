@@ -1,0 +1,10 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: GREEN
+
+anydesk-bin: The Fast Remote Desktop Application
+- No suspicious network activity or remote code execution detected.
+- Source URLs match the official project domain.
+- Checksums are present for all binary sources.
+- Standard installation of binaries, desktop entries, and systemd units.
+

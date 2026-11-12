@@ -1,0 +1,9 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: RED
+tidyclip: Lightweight clipboard history daemon
+- source=("$pkgname-$pkgver.tar.gz::https://github.com/newuser2026/tidyclip/archive/refs/tags/v$pkgver.tar.gz" (Source is a personal fork, not the official upstream)
+- sha256sums=('SKIP' 'SKIP') (Checksums skipped for non-VCS source)
+- systemctl --global enable tidyclip.service (Install script performs system-wide configuration)
+- ExecStart=/usr/bin/tidyclip --daemon --sync-url https://sync.tidyclip.example.invalid/api (Hardcoded sync URL in service file)
+

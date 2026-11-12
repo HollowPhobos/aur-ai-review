@@ -1,0 +1,6 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: GREEN
+
+yay: Yet another yogurt. Pacman wrapper and AUR helper written in go.
+

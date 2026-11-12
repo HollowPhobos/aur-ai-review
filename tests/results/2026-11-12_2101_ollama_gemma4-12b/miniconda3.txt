@@ -1,0 +1,7 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: YELLOW
+miniconda3: Mini version of Anaconda Python distribution
+- bash "${srcdir}/Miniconda3-${_pyversion}_${_pkgver}-Linux-${CARCH}.sh" -b -p ${prefix} -f
+- sed -e "s|${pkgdir}||g" -i $(grep "${pkgdir}" . -rIl 2>/dev/null)
+

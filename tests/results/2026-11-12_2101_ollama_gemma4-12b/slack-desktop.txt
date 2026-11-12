@@ -1,0 +1,10 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: GREEN
+
+slack-desktop: Slack Desktop (Beta) for Linux
+- No suspicious network activity or remote code execution detected.
+- Source URL matches official Slack download patterns.
+- Patch only modifies a desktop entry flag and icon name.
+- Standard debian package extraction and cleanup.
+

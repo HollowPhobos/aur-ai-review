@@ -1,0 +1,6 @@
+date:     2026-11-12T21:01:50+01:00
+backend:  ollama
+model:    gemma4:12b
+reviewer: 70d895d+dirty
+prompt:   64069d51f78c
+average: 2.5s

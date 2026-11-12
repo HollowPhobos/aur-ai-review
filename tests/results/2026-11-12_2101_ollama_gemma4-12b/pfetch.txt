@@ -1,0 +1,6 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: GREEN
+
+pfetch: A pretty system information tool written in POSIX sh.
+

