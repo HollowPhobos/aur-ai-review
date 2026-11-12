@@ -13,8 +13,9 @@ out="${1:?usage: $0 <outdir>}"
 mkdir -p "$out/yellow/tidyclip" "$out/red/fastgrep-bin"
 out="$(cd "$out" && pwd)"
 
+# gitc <message> [author name] [author email]: AUR commit authors = the people who pushed
 gitc() {
-    git -c user.name=test -c user.email=test@example.invalid commit -qm "$1"
+    git -c user.name="${2:-test}" -c user.email="${3:-test@example.invalid}" commit -qm "$1"
 }
 
 # ---------- YELLOW: sloppy new maintainer, not clearly malicious ----------
@@ -87,7 +88,7 @@ package() {
   install -Dm755 fastgrep "$pkgdir/usr/bin/fastgrep"
 }
 EOF
-git init -q && git add -A && gitc "2.4.0"
+git init -q && git add -A && gitc "2.4.0" "Original Dev" "dev@example.invalid"
 # mark 2.4.0 as already reviewed, like paru does
 git rev-parse HEAD > .git/AUR_SEEN
 
@@ -128,7 +129,7 @@ post_upgrade() {
   post_install
 }
 EOF
-git add -A && gitc "2.4.1"
+git add -A && gitc "2.4.1" "fg-maint" "fgmaint@example.invalid"
 
 echo "Fake packages created in $out"
 echo "  aur-ai-review $out/yellow"
