@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # paru FileManager hook: let an LLM review AUR build files before paru asks to proceed.
-# paru.conf:  [bin]  FileManager = paru-claude-review
+# paru.conf:  [bin]  FileManager = aur-ai-review
 #
 # The LLM is only a second opinion; the PKGBUILD is attacker-controlled input.
 #
@@ -38,7 +38,7 @@ red=$'\e[1;31m'; yellow=$'\e[1;33m'; green=$'\e[1;32m'; bold=$'\e[1m'; reset=$'\
 # Collect package dirs (paru may hand us one dir or a dir of symlinks to clones)
 mapfile -t pkgdirs < <(find -L "$review_root" -maxdepth 2 -name PKGBUILD -printf '%h\n' | sort -u)
 if [[ ${#pkgdirs[@]} -eq 0 ]]; then
-    echo "paru-claude-review: no PKGBUILD found under $review_root" >&2
+    echo "aur-ai-review: no PKGBUILD found under $review_root" >&2
     exit 0
 fi
 
@@ -103,7 +103,7 @@ Be concise. Do not repeat routine content. Answer in English only.'
 input="$(build_input)"
 
 if ! grep -qE '^=== PACKAGE .*: (UPDATE|NEW)' <<<"$input"; then
-    echo "${green}:: paru-claude-review: nothing changed since last review, skipping review${reset}" >&2
+    echo "${green}:: aur-ai-review: nothing changed since last review, skipping review${reset}" >&2
     exit 0
 fi
 

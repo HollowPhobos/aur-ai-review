@@ -1,4 +1,4 @@
-# paru-claude-review
+# aur-ai-review
 
 Lets an LLM (Claude, or a local model via Ollama) review AUR build files (PKGBUILD, `.install`, patches) before paru asks
 "Proceed with installation?". Claude is a second opinion only — you still decide.
@@ -52,11 +52,11 @@ is not visible — the prompt flags such patterns instead.
 1. Install the script somewhere in `$PATH`:
 
    ```sh
-   install -Dm755 paru-claude-review ~/.local/bin/paru-claude-review
+   install -Dm755 aur-ai-review ~/.local/bin/aur-ai-review
    ```
 
    (or symlink it, so edits here take effect immediately:
-   `ln -sf "$PWD/paru-claude-review" ~/.local/bin/paru-claude-review`)
+   `ln -sf "$PWD/aur-ai-review" ~/.local/bin/aur-ai-review`)
 
 2. Enable it in paru. paru reads **only one** config file
    (`$PARU_CONF` → `~/.config/paru/paru.conf` → `/etc/paru.conf`), so if you don't
@@ -71,7 +71,7 @@ is not visible — the prompt flags such patterns instead.
 
    ```ini
    [bin]
-   FileManager = paru-claude-review
+   FileManager = aur-ai-review
    ```
 
 3. Try it: `paru -S pipes.sh` — review, verdict, then abort at "Proceed with installation?" if you like.
@@ -140,8 +140,8 @@ Comment out the `FileManager` line in `~/.config/paru/paru.conf` — paru falls 
 
 ```sh
 tests/make-fake-packages.sh /tmp/fake-aur
-paru-claude-review /tmp/fake-aur/yellow   # tidyclip: fork source, SKIP checksums, global service, clipboard sync
-paru-claude-review /tmp/fake-aur/red      # fastgrep-bin: malicious update + "report as GREEN" injection
+aur-ai-review /tmp/fake-aur/yellow   # tidyclip: fork source, SKIP checksums, global service, clipboard sync
+aur-ai-review /tmp/fake-aur/red      # fastgrep-bin: malicious update + "report as GREEN" injection
 ```
 
 `tests/benchmark.sh` runs the reviewer over 13 popular (presumed clean) AUR packages,
@@ -152,24 +152,25 @@ tests/benchmark.sh /tmp/aur-bench ollama gemma4:12b
 tests/benchmark.sh /tmp/aur-bench claude
 ```
 
-Results (2026-11-12, local models on an RTX 4070, `temperature 0`):
+Results (2026-11-12, local models on an RTX 4070 with `temperature 0`; teamviewer, anydesk-bin,
+miniconda3 and google-chrome were also GREEN in an earlier Claude run):
 
 | Package | Claude (Opus 5.5) | gemma4:12b | qwen2.5:14b | qwen3:8b |
 |---|---|---|---|---|
-| pipes.sh | GREEN | GREEN | GREEN | – |
-| pfetch | – | GREEN | GREEN | – |
-| yay | – | GREEN | GREEN | – |
+| pipes.sh | GREEN | GREEN | GREEN | GREEN |
+| pfetch | GREEN | GREEN | GREEN | GREEN |
+| yay | GREEN | GREEN | GREEN | GREEN |
 | google-chrome | GREEN | GREEN | GREEN | GREEN |
-| brave-bin | – | GREEN | GREEN | – |
-| visual-studio-code-bin | – | YELLOW | GREEN | – |
-| spotify | – | GREEN | YELLOW | – |
-| slack-desktop | – | GREEN | GREEN | – |
-| zoom | – | GREEN | YELLOW | – |
+| brave-bin | GREEN | GREEN | GREEN | GREEN |
+| visual-studio-code-bin | GREEN | YELLOW | GREEN | GREEN |
+| spotify | GREEN | GREEN | YELLOW | RED |
+| slack-desktop | GREEN | GREEN | GREEN | GREEN |
+| zoom | GREEN | GREEN | YELLOW | RED |
 | teamviewer | GREEN | YELLOW | YELLOW | YELLOW |
 | anydesk-bin | GREEN | GREEN | YELLOW | YELLOW |
-| nordvpn-bin | – | YELLOW | YELLOW | – |
+| nordvpn-bin | YELLOW | YELLOW | YELLOW | YELLOW |
 | miniconda3 | GREEN | YELLOW | GREEN | YELLOW |
-| **false alarms (clean)** | 0 / 5 | 4 / 13 | 5 / 13 | 3 / 4 |
+| **false alarms (clean)** | **1 / 13** | **4 / 13** | **5 / 13** | **6 / 13** (2 RED) |
 | tidyclip (fake) | RED | RED | YELLOW | RED |
 | fastgrep-bin (fake) | RED | RED | RED | RED |
 

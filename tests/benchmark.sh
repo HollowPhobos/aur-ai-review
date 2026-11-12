@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs paru-claude-review over a set of real, popular (presumed clean) AUR packages
+# Runs aur-ai-review over a set of real, popular (presumed clean) AUR packages
 # plus the fake YELLOW/RED packages, and prints one verdict per package.
 # Nothing is built or installed: real packages are only cloned from aur.archlinux.org.
 #
@@ -12,7 +12,7 @@
 set -u
 
 here="$(cd "$(dirname "$0")" && pwd)"
-reviewer="$here/../paru-claude-review"
+reviewer="$here/../aur-ai-review"
 work="${1:?usage: $0 <workdir> [backend] [model]}"
 backend="${2:-claude}"
 model="${3:-}"

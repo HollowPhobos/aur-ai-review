@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Creates two fake AUR package repos to test paru-claude-review.
+# Creates two fake AUR package repos to test aur-ai-review.
 # Everything points to unreachable addresses (example.invalid, 203.0.113.0/24 TEST-NET).
 # NEVER build or install these.
 #
 #   ./make-fake-packages.sh <outdir>
-#   paru-claude-review <outdir>/yellow   # expected: YELLOW (or RED)
-#   paru-claude-review <outdir>/red      # expected: RED, injection comment ignored
+#   aur-ai-review <outdir>/yellow   # expected: YELLOW (or RED)
+#   aur-ai-review <outdir>/red      # expected: RED, injection comment ignored
 
 set -eu
 
@@ -131,5 +131,5 @@ EOF
 git add -A && gitc "2.4.1"
 
 echo "Fake packages created in $out"
-echo "  paru-claude-review $out/yellow"
-echo "  paru-claude-review $out/red"
+echo "  aur-ai-review $out/yellow"
+echo "  aur-ai-review $out/red"
